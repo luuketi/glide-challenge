@@ -4,83 +4,45 @@ import json
 
 Department = namedtuple('Department', ['id', 'name', 'superdepartment'])
 Office = namedtuple('Office', ['id', 'city', 'country', 'address'])
-#Employee = namedtuple('Employee', ['id', 'first', 'last', 'manager', 'department', 'office'])
-class Employee(NamedTuple):
-    id: int
-    first: str
-    last: str
-    manager: Any
-    department: Department
-    office: Office
+Employee = namedtuple('Employee', ['id', 'first', 'last', 'manager', 'department', 'office'])
 
-    def __repr__(self):
-        return '<Employee {} {} {}, ' \
-               'manager: {}, ' \
-               'department: {}, ' \
-               'office: {}>'.format(self.id, self.first, self.last,
-                                    self.manager.id if self.manager else None,
-                                    self.department.id if self.department else None,
-                                    self.office.id if self.office else None)
 
-class Offices:
+class Collection(dict):
 
-    def __init__(self, offices):
-        self._offices = {o.id: o for o in offices}
+    def add(self, elem):
+        super().__setitem__(elem.id, elem)
+
+    def adds(self, elems):
+        super().update([(e.id, e) for e in elems])
 
     def get_by_id(self, id):
-        return self._offices.get(id)
-
-
-class Departments:
-
-    def __init__(self, departments):
-        self._departments = {d.id: d for d in departments}
-
-    def get_by_id(self, id):
-        return self._departments.get(id)
-
-
-class Employees:
-
-    def __init__(self, employees):
-        self._employees = {e.id: e for e in employees}
-
-    def get_by_id(self, id):
-        return self._employees.get(id)
+        return super().get(id)
 
 
 def load_data_from_files():
-    departments = []
+    departments = Collection()
+    offices = Collection()
+    employees = Collection()
+
     with open('data/departments.json') as file:
         for d in json.load(file):
-            superdepartment = d['superdepartment']
-            for dep in departments:
-                if dep.id == superdepartment:
-                    superdepartment = dep
-
-            departments += [Department(d['id'], d['name'], superdepartment)]
+            superdepartment = departments.get_by_id(d['superdepartment'])
+            new_department = Department(d['id'], d['name'], superdepartment)
+            departments.add(new_department)
 
     with open('data/offices.json') as file:
-        offices = json.load(file, object_hook=lambda o: Office(**o))
+        offices.adds(json.load(file, object_hook=lambda o: Office(**o)))
 
-    departments = Departments(departments)
-    offices = Offices(offices)
-
-    employees = []
     with open('data/employees.json') as file:
         for e in json.load(file):
             department = departments.get_by_id(e['department'])
             office = offices.get_by_id(e['office'])
-            manager = e['manager']
-            for employee in employees:
-                if employee.id == manager:
-                    manager = employee
-                    break
+            manager = employees.get_by_id(e['manager'])
+            new_employee = Employee(e['id'], e['first'], e['last'], manager, department, office)
+            employees.add(new_employee)
 
-            employees += [Employee(e['id'], e['first'], e['last'], manager, department, office)]
-    return departments, offices, Employees(employees)
+    return departments, offices, employees
 
 
 Departments, Offices, Employees = load_data_from_files()
-
 
