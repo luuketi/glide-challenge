@@ -1,0 +1,35 @@
+[
+  {
+    "first": "Patricia",
+    "last": "Diaz",
+    "id": 1,
+    "manager": null,
+    "department": 5,
+    "office": 2
+  },
+  {
+    "first": "Daniel",
+    "last": "Smith",
+    "id": 2,
+    "manager": 1,
+    "department": 5,
+    "office": 2
+  },
+  {
+    "first": "Thomas",
+    "last": "Parker",
+    "id": 3,
+    "manager": 1,
+    "department": 4,
+    "office": null
+  },
+    {
+    "first": "Thdfomfas",
+    "last": "Pardfddfker",
+    "id": 4,
+    "manager": 2,
+    "department": 9,
+    "office": null
+  }
+
+]
