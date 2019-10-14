@@ -1,4 +1,3 @@
-import datetime
 from flask import request
 from flask_restplus import Resource, Api
 from webargs import fields, validate
@@ -6,8 +5,8 @@ from webargs.flaskparser import use_kwargs
 
 
 from src import blueprint
-from src.dto import *
-from src.models import *
+from src.dto import build_department, build_office, build_employee
+from src.models import Departments, Offices, Employees
 
 
 api = Api(blueprint,
@@ -20,33 +19,17 @@ args = {
     'offset': fields.Int(missing=1),
 }
 
+
 class BaseResource(Resource):
 
-    def store_expanded_department(self, expanded):
-        self._department_expanded = expanded
-
-    def store_expanded_office(self, expanded):
-        self._office_expanded = expanded
-
-    def store_expanded_manager(self, expanded):
-        self._manager_expanded = expanded
-
-    def _build_schema(self, expand):
-        self._schema_builder = self._get_schema_builder()
-        self._schema_builder.build_schema(expand, self)
-
     def _return_detail(self, id):
-        expand = request.values.getlist('expand')
-        self._build_schema(expand)
-        schema = self._get_expanded_schema()
+        schema = self._get_expanded_schema(request.values.getlist('expand'))
         obj = self._get_collection().get_by_id(id)
         return schema().dump(obj)
 
     def _return_list(self, limit, offset):
-        expand = request.values.getlist('expand')
-        self._build_schema(expand)
+        schema = self._get_expanded_schema(request.values.getlist('expand'))
         objs = self._get_collection().get(limit, offset)
-        schema = self._get_expanded_schema()
         return schema(many=True).dump(objs)
 
 
@@ -55,11 +38,8 @@ class DepartmentBase:
     def _get_collection(self):
         return Departments
 
-    def _get_schema_builder(self):
-        return DepartmentSchemaBuilder()
-
-    def _get_expanded_schema(self):
-        return self._department_expanded
+    def _get_expanded_schema(self, expand):
+        return build_department(expand)
 
 
 class OfficeBase:
@@ -67,11 +47,8 @@ class OfficeBase:
     def _get_collection(self):
         return Offices
 
-    def _get_expanded_schema(self):
-        return self._office_expanded
-
-    def _get_schema_builder(self):
-        return OfficeSchemaBuilder()
+    def _get_expanded_schema(self, expand):
+        return build_office()
 
 
 class EmployeeBase:
@@ -79,11 +56,8 @@ class EmployeeBase:
     def _get_collection(self):
         return Employees
 
-    def _get_schema_builder(self):
-        return EmployeeSchemaBuilder()
-
-    def _get_expanded_schema(self):
-        return self._employee_expanded
+    def _get_schema_builder(self, expand):
+        return build_employee(expand)
 
 
 @api.route('/offices/<int:id>')

@@ -4,8 +4,6 @@ import os
 import unittest
 
 from src import create_app
-from src.controllers import blueprint
-import src.models as models
 
 app, manager = create_app(os.getenv('APP_ENV') or 'dev')
 

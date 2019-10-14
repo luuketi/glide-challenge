@@ -85,6 +85,9 @@ class DepartmentSchemaBuilder(Visitor):
     def __init__(self):
         self._department_expanded = None
 
+    def get_expanded(self):
+        return self._department_expanded
+
     def store_expanded_department(self, expanded):
         self._department_expanded = expanded
 
@@ -102,6 +105,9 @@ class OfficeSchemaBuilder(Visitor):
     def __init__(self):
         self._office_expanded = None
 
+    def get_expanded(self):
+        return self._office_expanded
+
     def store_expanded_office(self, expanded):
         self._office_expanded = expanded
 
@@ -117,6 +123,9 @@ class EmployeeSchemaBuilder(Visitor):
         self._office_expanded = None
         self._manager_expanded = None
 
+    def get_expanded(self):
+        return self._manager_expanded
+
     def store_expanded_department(self, expanded):
         self._department_expanded = expanded
 
@@ -130,7 +139,24 @@ class EmployeeSchemaBuilder(Visitor):
         for e in expand:
             first = e.split('.')[0]
             last = '.'.join(e.split('.')[1:])
-            schema_builder = self._get_builder(first)
-            schema_builder.build_schema([last], self)
+            if first:
+                schema_builder = self._get_builder(first)
+                schema_builder.build_schema([last], self)
         schema = EmployeeSchema(self._manager_expanded, self._department_expanded, self._office_expanded).build()
         visit.store_expanded_manager(schema)
+
+def build(builder, expand=None):
+    builder.build_schema(expand, builder)
+    return builder.get_expanded()()
+
+
+def build_department(expand=[]):
+    return build(DepartmentSchemaBuilder(), expand)
+
+
+def build_office():
+    return build(OfficeSchemaBuilder())
+
+
+def build_employee(expand=[]):
+    return build(EmployeeSchemaBuilder(), expand)

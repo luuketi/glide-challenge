@@ -1,6 +1,4 @@
-
 from flask import Flask, Blueprint
-from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager
 
 from src.config import config_by_name

@@ -6,7 +6,7 @@ Office = namedtuple('Office', ['id', 'city', 'country', 'address'])
 Employee = namedtuple('Employee', ['id', 'first', 'last', 'manager', 'department', 'office'])
 
 
-class Collection(dict):
+class Collection:
 
     def __init__(self):
         self._data = {}
