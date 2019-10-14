@@ -1,5 +1,4 @@
 from collections import namedtuple
-from typing import NamedTuple, Any
 import json
 
 Department = namedtuple('Department', ['id', 'name', 'superdepartment'])
@@ -20,12 +19,10 @@ class Collection(dict):
 
     def get(self, limit=100, offset=1):
         max = len(self._data) if limit + offset - 1 > len(self._data) else limit + offset
-        data = [self._data.get(k) for k in range(offset, max)]
-        return data
+        return [self._data.get(k) for k in range(offset, max)]
 
     def get_by_id(self, id):
         return self._data.get(id)
-
 
 
 def load_data_from_files():

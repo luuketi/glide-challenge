@@ -1,6 +1,4 @@
-from marshmallow import Schema, fields, post_load, validate
-
-from src.models import Department, Office, Employee, Employees, Departments
+from marshmallow import Schema, fields
 
 
 class BaseSchema:
@@ -54,69 +52,85 @@ class DepartmentSchema(BaseSchema):
             'superdepartment': self._superdepartment,
         }
 
-class ListSchema(BaseSchema):
 
-    def _schema_fields(self):
-        return {
+class Visitor:
 
+    def store_expanded_department(self, expanded):
+        pass
+
+    def store_expanded_office(self, expanded):
+        pass
+
+    def store_expanded_employee(self, expanded):
+        pass
+
+    def build_schema(self, expand=[], visit=None):
+        pass
+
+    @staticmethod
+    def _get_builder(name):
+
+        expandables = {
+            'manager': EmployeeSchemaBuilder(),
+            'office': OfficeSchemaBuilder(),
+            'department': DepartmentSchemaBuilder(),
+            'superdepartment': DepartmentSchemaBuilder(),
         }
 
-
-def build_employee(manager=None, department=None, office=None):
-    return EmployeeSchema(manager, department, office).build()
+        return expandables[name]
 
 
-def build_office():
-    return OfficeSchema().build()
+class DepartmentSchemaBuilder(Visitor):
+
+    def __init__(self):
+        self._department_expanded = None
+
+    def store_expanded_department(self, expanded):
+        self._department_expanded = expanded
+
+    def build_schema(self, expand=[], visit=None):
+        for e in expand:
+            last = '.'.join(e.split('.')[1:])
+            if e:
+                DepartmentSchemaBuilder().build_schema([last], self)
+        schema = DepartmentSchema(self._department_expanded).build()
+        visit.store_expanded_department(schema)
 
 
-def build_department(superdepartment=None):
-    return DepartmentSchema(superdepartment).build()
+class OfficeSchemaBuilder(Visitor):
+
+    def __init__(self):
+        self._office_expanded = None
+
+    def store_expanded_office(self, expanded):
+        self._office_expanded = expanded
+
+    def build_schema(self, expand=[], visit=None):
+        schema = OfficeSchema().build()
+        visit.store_expanded_office(schema)
 
 
-def dump(data, expands='department'):
-    _data = data
-    is_list = False
-    if type(data).__name__ == 'list':
-        is_list = True
-        data = data[0]
-    expanded = None
-    if type(data).__name__ == 'Department':
-        for e in reversed(expands.split('.')):
-            expanded = build_department(expanded)
-    elif type(data).__name__ == 'Office':
-        expanded = build_office()
-    elif type(data).__name__ == 'Employee':
-        first = expands.split('.')[0]
-        department_expanded = None
-        manager_expanded = None
-        office_expanded = None
+class EmployeeSchemaBuilder(Visitor):
 
-        if first == 'manager':
-            man_expanded = None
-            dep_expanded = None
-            off_expanded = None
-            for e in reversed(expands.split('.')[1:]):
-                if e == 'department' or e == 'superdepartment':
-                    dep_expanded = build_department(dep_expanded)
-                if e == 'office':
-                    off_expanded = build_office()
-                if e == 'manager':
-                    man_expanded = build_employee(man_expanded, dep_expanded, off_expanded)
-            manager_expanded = build_employee(man_expanded, dep_expanded, off_expanded)
-        if first == 'department':
-            for e in reversed(expands.split('.')):
-                department_expanded = build_department(department_expanded)
-        if first == 'office':
-            office_expanded = build_office()
-        expanded = build_employee(manager=manager_expanded, department=department_expanded, office=office_expanded)
-    return expanded(many=is_list).dump(_data)
+    def __init__(self):
+        self._department_expanded = None
+        self._office_expanded = None
+        self._manager_expanded = None
 
+    def store_expanded_department(self, expanded):
+        self._department_expanded = expanded
 
-print(dump(Department(1, 'sdf', Department(2, 'aaa', None)), expands='superdepartment.superdepartment'))
-print(dump(Office(1, 'asdfsf', 'asdfsddd', 'ss')))
-print(dump(Employees.get_by_id(4), expands='manager.manager.office'))
+    def store_expanded_office(self, expanded):
+        self._office_expanded = expanded
 
+    def store_expanded_manager(self, expanded):
+        self._manager_expanded = expanded
 
-
-
+    def build_schema(self, expand=[], visit=None):
+        for e in expand:
+            first = e.split('.')[0]
+            last = '.'.join(e.split('.')[1:])
+            schema_builder = self._get_builder(first)
+            schema_builder.build_schema([last], self)
+        schema = EmployeeSchema(self._manager_expanded, self._department_expanded, self._office_expanded).build()
+        visit.store_expanded_manager(schema)
