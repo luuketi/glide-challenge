@@ -1,68 +1,85 @@
-import random
-import string
 from marshmallow import Schema, fields, post_load, validate
 
 from src.models import Department, Office, Employee, Employees, Departments
 
+
+class BaseSchema:
+
+    def _build_expanded(self, field, function):
+        return fields.Nested(field) if field else fields.Function(function)
+
+    def build(self):
+        return type(self.__class__.__name__, (Schema,), self._schema_fields())
+
+
+class EmployeeSchema(BaseSchema):
+
+    def __init__(self, manager=None, department=None, office=None):
+        self._manager = self._build_expanded(manager, lambda obj: obj.manager.id if obj.manager else None)
+        self._department = self._build_expanded(department, lambda obj: obj.department.id if obj.department else None)
+        self._office = self._build_expanded(office, lambda obj: obj.office.id if obj.office else None)
+
+    def _schema_fields(self):
+        return {
+            'id': fields.Integer(),
+            'first': fields.String(),
+            'last': fields.String(),
+            'manager': self._manager,
+            'department': self._department,
+            'office': self._office,
+        }
+
+
+class OfficeSchema(BaseSchema):
+
+    def _schema_fields(self):
+        return {
+            'id': fields.Integer(),
+            'city': fields.String(),
+            'country': fields.String(),
+            'address': fields.String(),
+        }
+
+
+class DepartmentSchema(BaseSchema):
+
+    def __init__(self, superdepartment=None):
+        self._superdepartment = self._build_expanded(superdepartment,
+                                                     lambda obj: obj.superdepartment.id if obj.superdepartment else None)
+
+    def _schema_fields(self):
+        return {
+            'id': fields.Integer(),
+            'name': fields.String(),
+            'superdepartment': self._superdepartment,
+        }
+
+class ListSchema(BaseSchema):
+
+    def _schema_fields(self):
+        return {
+
+        }
+
+
 def build_employee(manager=None, department=None, office=None):
-
-    if manager:
-        manager = fields.Nested(manager)
-    else:
-        manager = fields.Function(lambda obj: obj.manager.id if obj.manager else None)
-
-    if department:
-        department = fields.Nested(department)
-    else:
-        department = fields.Function(lambda obj: obj.department.id if obj.department else None)
-
-    if office:
-        office = fields.Nested(office)
-    else:
-        office = fields.Function(lambda obj: obj.office.id if obj.office else None)
-
-    employee_schema = {
-        'id': fields.Integer(),
-        'first': fields.String(),
-        'last': fields.String(),
-        'manager': manager,
-        'department': department,
-        'office': office,
-    }
-    schema_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    return type(schema_name, (Schema,), employee_schema)
-
+    return EmployeeSchema(manager, department, office).build()
 
 
 def build_office():
-    office_schema = {
-        'id': fields.Integer(),
-        'city': fields.String(),
-        'country': fields.String(),
-        'address': fields.String(),
-    }
-    schema_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    return type(schema_name, (Schema,), office_schema)
+    return OfficeSchema().build()
 
 
 def build_department(superdepartment=None):
-
-    if superdepartment:
-        superdepartment = fields.Nested(superdepartment)
-    else:
-        superdepartment = fields.Function(lambda obj: obj.superdepartment.id if obj.superdepartment else None)
-
-    department_schema = {
-        'id': fields.Integer(),
-        'name': fields.String(),
-        'superdepartment': superdepartment,
-    }
-    schema_name = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-    return type(schema_name, (Schema,), department_schema)
+    return DepartmentSchema(superdepartment).build()
 
 
 def dump(data, expands='department'):
-
+    _data = data
+    is_list = False
+    if type(data).__name__ == 'list':
+        is_list = True
+        data = data[0]
     expanded = None
     if type(data).__name__ == 'Department':
         for e in reversed(expands.split('.')):
@@ -93,13 +110,12 @@ def dump(data, expands='department'):
         if first == 'office':
             office_expanded = build_office()
         expanded = build_employee(manager=manager_expanded, department=department_expanded, office=office_expanded)
-
-    return expanded().dump(data)
+    return expanded(many=is_list).dump(_data)
 
 
 print(dump(Department(1, 'sdf', Department(2, 'aaa', None)), expands='superdepartment.superdepartment'))
 print(dump(Office(1, 'asdfsf', 'asdfsddd', 'ss')))
-print(dump(Employees.get_by_id(4), expands='manager.manager'))
+print(dump(Employees.get_by_id(4), expands='manager.manager.office'))
 
 
 

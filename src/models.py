@@ -9,14 +9,23 @@ Employee = namedtuple('Employee', ['id', 'first', 'last', 'manager', 'department
 
 class Collection(dict):
 
+    def __init__(self):
+        self._data = {}
+
     def add(self, elem):
-        super().__setitem__(elem.id, elem)
+        self._data[elem.id] = elem
 
     def adds(self, elems):
-        super().update([(e.id, e) for e in elems])
+        self._data.update([(e.id, e) for e in elems])
+
+    def get(self, limit=100, offset=1):
+        max = len(self._data) if limit + offset - 1 > len(self._data) else limit + offset
+        data = [self._data.get(k) for k in range(offset, max)]
+        return data
 
     def get_by_id(self, id):
-        return super().get(id)
+        return self._data.get(id)
+
 
 
 def load_data_from_files():
