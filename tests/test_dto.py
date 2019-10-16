@@ -4,12 +4,16 @@ from tests.base import BaseTestCase
 from src.dto import build_department, build_office, build_employee
 from src.models import Departments, Offices, Employees
 
+
 class OfficeSchemaTest(BaseTestCase):
 
     def test_office(self):
         o = Offices.get_by_id(1)
         dumped = build_office().dump(o)
         self.assertDictEqual(dumped, dict(o._asdict()))
+
+
+class DepartmentSchemaTest(BaseTestCase):
 
     def test_department(self):
         o = Departments.get_by_id(1)
@@ -23,6 +27,16 @@ class OfficeSchemaTest(BaseTestCase):
                    '{"id": 6, "name": "Outbound Sales", "superdepartment": ' \
                    '{"id": 1, "name": "Sales", "superdepartment": null}}} '
         self.assertEqual(dumped, json.loads(expected))
+
+
+class EmployeeSchemaTest(BaseTestCase):
+
+    def setUp(self):
+        employees = '[{"first": "Patricia","last": "Diaz","id": 1,"manager": null,"department": 5,"office": 2},'
+        ' {"first": "Daniel","last": "Smith","id": 2,"manager": 1,"department": 5,"office": 2},'
+        '   {"first": "Thomas","last": "Parker","id": 3,"manager": 1,"department": 4,"office": null},'
+        '  {"first": "Thdfomfas","last": "Pardfddfker","id": 4,"manager": 2,"department": 9,"office": null}]'
+
 
     def test_employee(self):
         o = Employees.get_by_id(1)
