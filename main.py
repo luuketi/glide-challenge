@@ -2,7 +2,7 @@
 
 import os
 import unittest
-
+from src.controllers import blueprint
 from src import create_app
 
 app, manager = create_app(os.getenv('APP_ENV') or 'dev')
