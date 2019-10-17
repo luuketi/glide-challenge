@@ -33,66 +33,81 @@ class EmployeesCollection(Collection):
 
     def __init__(self):
         super().__init__()
-        self._pendings = []
+        self._pending_managers = set([])
+        self._get_q = 0
 
     def _chunked_iterable(self, iterable, size):
+        i = iter(iterable)
         while True:
-            chunk = tuple(itertools.islice(iter(iterable), size))
+            chunk = tuple(itertools.islice(i, size))
             if not chunk:
                 break
             yield chunk
 
     def _get(self, params):
+        resp = requests.get(self._url, params).json()
+        self._get_q += 1
+        return resp
+
+    def _get_by_id(self, params):
         print('Retrieving: {}'.format(str(['id={} '.format(p) for i, p in params])))
-        return requests.get(self._url, params).json()
+        return self._get(params)
 
     def _process_employees(self, employees):
         for e in employees:
             office = Offices.get_by_id(e['office'])
             department = Departments.get_by_id(e['department'])
             manager = super().get_by_id(e['manager'])
-            if not e['manager'] or manager:
-                new_employee = Employee(e['id'], e['first'], e['last'], manager, department, office)
-                super().add(new_employee)
-            else:
-                print('Employee {} not found in collection'.format(e['id']))
+            if e['manager'] and not manager:
+                print('Employee {} not found in collection'.format(e['manager']))
+                self._pending_managers.add(e['manager'])
                 new_employee = Employee(e['id'], e['first'], e['last'], e['manager'], department, office)
-                self._pendings.append(new_employee)
+            else:
+                new_employee = Employee(e['id'], e['first'], e['last'], manager, department, office)
+            super().add(new_employee)
 
-    def _retrieve_by_id(self, id, expand=[]):
-        data = self._get([('id', id)])
+    def _process_response(self, data, expand):
         self._process_employees(data)
-        manager_count = max([sum(m for m in e.split('.') if m == 'manager') for e in expand], default=0)
+        manager_count = max([sum(1 for m in e.split('.') if m == 'manager') for e in expand], default=0)
         self._retrieve_pending(manager_count)
 
-    def get(self, limit=100, offset=1):
-        data = requests.get(self._url, {'limit': limit, 'offset': offset}).json()[0]
-        for d in data:
-            pass
-
-    def get_by_id(self, id, expand=[]):
-        if id not in self._data:
-            self._retrieve_by_id(id, expand)
+    def get(self, limit=100, offset=1, expand=[]):
+        if offset < 1:
+            raise RuntimeError('Offset must be higher than 0')
+        if limit < 1 or limit > 1000:
+            raise RuntimeError('Limit must be higher than 0 and less than 1000')
+        data = self._get({'limit': limit, 'offset': offset})
+        self._data = {}
+        self._process_response(data, expand)
         return super().get_by_id(id)
 
+    def get_by_id(self, id, expand=[]):
+        data = self._get_by_id([('id', id)])
+        self._data = {}
+        self._process_response(data, expand)
+        return super().get_by_id(id)
+
+    def _update_pending_managers(self, manager):
+        obj = super().get_by_id(manager)
+        for k, v in self._data.items():
+            if v.manager == manager:
+                v.manager = obj
+
     def _retrieve_pending(self, levels=0):
-        pending_managers = list(set([pending.manager for pending in self._pendings]))
-        print('Pending managers to retrieve: {} - level {}'.format(len(pending_managers), levels))
-        for chunks in self._chunked_iterable(self._pendings, 50):
-            params = [('id', employee.manager) for employee in chunks]
-            data = self._get(params)
-            self._process_employees(data)
+        if levels:
+            pending_managers = list(self._pending_managers)
+            print('Pending managers to retrieve: {} - level {}'.format(len(pending_managers), levels))
+            self._pending_managers = set([])
+            for chunks in self._chunked_iterable(pending_managers, 100):
+                params = [('id', manager) for manager in chunks]
+                data = self._get_by_id(params)
+                self._process_employees(data)
 
-            for employee in chunks:
-                #fix this
-                manager = Employees.get_by_id(employee.manager)
-                if manager:
-                    employee.manager = manager
-                    Employees.add(employee)
-                    self._pendings.remove(employee)
+                for manager in chunks:
+                    self._update_pending_managers(manager)
 
-        if self._pendings and levels > 0:
-            self._retrieve_pending(levels-1)
+            if self._pending_managers and levels > 0:
+                self._retrieve_pending(levels-1)
 
 
 def load_data_from_files():
@@ -113,6 +128,8 @@ def load_data_from_files():
 
 Departments, Offices = load_data_from_files()
 Employees = EmployeesCollection()
-Employees.get_by_id(10)
+#Employees.get_by_id(10000, ['manager.manager.manager.manager.manager'])
+Employees.get(1000,100000, ['manager.manager.manager.manager.manager.manager'])
 from pprint import pprint
 pprint(Employees._data.keys())
+pprint(Employees._get_q)
