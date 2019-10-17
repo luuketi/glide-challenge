@@ -3,7 +3,6 @@ from flask_restplus import Resource, Api
 from webargs import fields, validate
 from webargs.flaskparser import use_kwargs
 
-
 from src import blueprint
 from src.dto import build_department, build_office, build_employee
 from src.models import Departments, Offices, Employees
@@ -16,7 +15,7 @@ api = Api(blueprint,
 
 args = {
     'limit': fields.Int(missing=100, validate=[validate.Range(min=1, max=10000)]),
-    'offset': fields.Int(missing=1),
+    'offset': fields.Int(missing=1, validate=[validate.Range(min=1)]),
 }
 
 
@@ -56,7 +55,7 @@ class EmployeeBase:
     def _get_collection(self):
         return Employees
 
-    def _get_schema_builder(self, expand):
+    def _get_expanded_schema(self, expand):
         return build_employee(expand)
 
 

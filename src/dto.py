@@ -13,9 +13,19 @@ class BaseSchema:
 class EmployeeSchema(BaseSchema):
 
     def __init__(self, manager=None, department=None, office=None):
-        self._manager = self._build_expanded(manager, lambda obj: obj.manager.id if obj.manager else None)
-        self._department = self._build_expanded(department, lambda obj: obj.department.id if obj.department else None)
-        self._office = self._build_expanded(office, lambda obj: obj.office.id if obj.office else None)
+
+        def a(obj, attr):
+            if type(obj) == int:
+                return obj
+            if type(getattr(obj, attr)) == int:
+                return getattr(obj, attr)
+            if hasattr(getattr(obj, attr), 'id'):
+                return getattr(obj, attr).id
+            return None
+
+        self._manager = self._build_expanded(manager, lambda obj: a(obj, 'manager'))
+        self._department = self._build_expanded(department, lambda obj: a(obj, 'department'))
+        self._office = self._build_expanded(office, lambda obj: a(obj, 'office'))
 
     def _schema_fields(self):
         return {
@@ -55,13 +65,13 @@ class DepartmentSchema(BaseSchema):
 
 class Visitor:
 
-    def store_expanded_department(self, expanded):
+    def accept_expanded_department(self, expanded):
         pass
 
-    def store_expanded_office(self, expanded):
+    def accept_expanded_office(self, expanded):
         pass
 
-    def store_expanded_employee(self, expanded):
+    def accept_expanded_employee(self, expanded):
         pass
 
     def build_schema(self, expand=[], visit=None):
@@ -79,6 +89,14 @@ class Visitor:
 
         return expandables[name]
 
+    def _expand(self, expand):
+        for e in expand:
+            first = e.split('.')[0]
+            last = '.'.join(e.split('.')[1:])
+            if first and first in self._allowed_expands():
+                schema_builder = self._get_builder(first)
+                schema_builder.build_schema([last], self)
+
 
 class DepartmentSchemaBuilder(Visitor):
 
@@ -88,16 +106,16 @@ class DepartmentSchemaBuilder(Visitor):
     def get_expanded(self):
         return self._department_expanded
 
-    def store_expanded_department(self, expanded):
+    def accept_expanded_department(self, expanded):
         self._department_expanded = expanded
 
+    def _allowed_expands(self):
+        return ['superdepartment']
+
     def build_schema(self, expand=[], visit=None):
-        for e in expand:
-            last = '.'.join(e.split('.')[1:])
-            if e:
-                DepartmentSchemaBuilder().build_schema([last], self)
+        self._expand(expand)
         schema = DepartmentSchema(self._department_expanded).build()
-        visit.store_expanded_department(schema)
+        visit.accept_expanded_department(schema)
 
 
 class OfficeSchemaBuilder(Visitor):
@@ -108,12 +126,12 @@ class OfficeSchemaBuilder(Visitor):
     def get_expanded(self):
         return self._office_expanded
 
-    def store_expanded_office(self, expanded):
+    def accept_expanded_office(self, expanded):
         self._office_expanded = expanded
 
     def build_schema(self, expand=[], visit=None):
         schema = OfficeSchema().build()
-        visit.store_expanded_office(schema)
+        visit.accept_expanded_office(schema)
 
 
 class EmployeeSchemaBuilder(Visitor):
@@ -126,28 +144,27 @@ class EmployeeSchemaBuilder(Visitor):
     def get_expanded(self):
         return self._manager_expanded
 
-    def store_expanded_department(self, expanded):
+    def _allowed_expands(self):
+        return ['superdepartment', 'department', 'manager', 'office']
+
+    def accept_expanded_department(self, expanded):
         self._department_expanded = expanded
 
-    def store_expanded_office(self, expanded):
+    def accept_expanded_office(self, expanded):
         self._office_expanded = expanded
 
-    def store_expanded_manager(self, expanded):
+    def accept_expanded_manager(self, expanded):
         self._manager_expanded = expanded
 
     def build_schema(self, expand=[], visit=None):
-        for e in expand:
-            first = e.split('.')[0]
-            last = '.'.join(e.split('.')[1:])
-            if first:
-                schema_builder = self._get_builder(first)
-                schema_builder.build_schema([last], self)
+        self._expand(expand)
         schema = EmployeeSchema(self._manager_expanded, self._department_expanded, self._office_expanded).build()
-        visit.store_expanded_manager(schema)
+        visit.accept_expanded_manager(schema)
+
 
 def build(builder, expand=None):
     builder.build_schema(expand, builder)
-    return builder.get_expanded()()
+    return builder.get_expanded()
 
 
 def build_department(expand=[]):
