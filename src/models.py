@@ -20,11 +20,11 @@ class Collection:
     def adds(self, elems):
         self._data.update([(e.id, e) for e in elems])
 
-    def get(self, limit=100, offset=1):
+    def get(self, limit=100, offset=1, expand=None):
         max = len(self._data) + 1 if limit + offset > len(self._data) + 1 else limit + offset
         return [self._data.get(k) for k in range(offset, max)]
 
-    def get_by_id(self, id):
+    def get_by_id(self, id, expand=None):
         return self._data.get(id)
 
 
@@ -39,6 +39,7 @@ class EmployeesCollection(Collection):
         self._pending_managers = set([])
 
     def _chunked_iterable(self, iterable, size):
+        """Iterates iterable in chunks of size"""
         i = iter(iterable)
         while True:
             chunk = tuple(itertools.islice(i, size))
@@ -54,6 +55,7 @@ class EmployeesCollection(Collection):
         return self._get(params)
 
     def _process_employees(self, employees):
+        """Build employees objects from json dict and store them"""
         for e in employees:
             office = Offices.get_by_id(e['office'])
             department = Departments.get_by_id(e['department'])
@@ -67,6 +69,7 @@ class EmployeesCollection(Collection):
             super().add(new_employee)
 
     def _process_response(self, data, expand):
+        """Store the employees from json dict and retrieve pending managers"""
         self._data = {}
         self._pending_managers = set([])
         self._process_employees(data)
@@ -88,6 +91,7 @@ class EmployeesCollection(Collection):
         return super().get_by_id(id)
 
     def _update_pending_managers(self, managers):
+        """Update manager objects on stored employees"""
         for manager in managers:
             obj = super().get_by_id(manager)
             for k, v in self._data.items():
@@ -95,6 +99,7 @@ class EmployeesCollection(Collection):
                     v.manager = obj
 
     def _retrieve_pending(self, levels=0):
+        """Retrieve pending managers using _pending_managers"""
         if levels:
             pending_managers = list(self._pending_managers)
             logging.info('Pending managers to retrieve: {} - level {}'.format(len(pending_managers), levels))

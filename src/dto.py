@@ -1,3 +1,5 @@
+from abc import ABC
+
 from marshmallow import Schema, fields
 
 
@@ -54,7 +56,7 @@ class DepartmentSchema(BaseSchema):
         }
 
 
-class Visitor:
+class Visitor(ABC):
 
     def accept_expanded_department(self, expanded):
         pass
@@ -62,11 +64,11 @@ class Visitor:
     def accept_expanded_office(self, expanded):
         pass
 
-    def accept_expanded_employee(self, expanded):
+    def accept_expanded_manager(self, expanded):
         pass
 
     def build_schema(self, expand=[], visit=None):
-        pass
+        raise NotImplementedError
 
     @staticmethod
     def _get_builder(name):
@@ -81,6 +83,7 @@ class Visitor:
         return expandables[name]
 
     def _expand(self, expand):
+        """Iterates over expand list and builds the nested schema"""
         for e in expand:
             first = e.split('.')[0]
             last = '.'.join(e.split('.')[1:])
@@ -153,18 +156,21 @@ class EmployeeSchemaBuilder(Visitor):
         visit.accept_expanded_manager(schema)
 
 
-def build(builder, expand=None):
+def _build(builder, expand=None):
     builder.build_schema(expand, builder)
     return builder.get_expanded()
 
 
 def build_department(expand=[]):
-    return build(DepartmentSchemaBuilder(), expand)
+    """Creates a Department schema based on expand list"""
+    return _build(DepartmentSchemaBuilder(), expand)
 
 
 def build_office():
-    return build(OfficeSchemaBuilder())
+    """Creates a Office schema based on expand list"""
+    return _build(OfficeSchemaBuilder())
 
 
 def build_employee(expand=[]):
-    return build(EmployeeSchemaBuilder(), expand)
+    """Creates a Employee schema based on expand list"""
+    return _build(EmployeeSchemaBuilder(), expand)
