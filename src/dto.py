@@ -4,7 +4,7 @@ from marshmallow import Schema, fields
 class BaseSchema:
 
     def _build_expanded(self, field, function):
-        return fields.Nested(field) if field else fields.Function(function)
+        return fields.Nested(field) if field and type(field) != int else fields.Function(function)
 
     def build(self):
         return type(self.__class__.__name__, (Schema,), self._schema_fields())
@@ -14,18 +14,9 @@ class EmployeeSchema(BaseSchema):
 
     def __init__(self, manager=None, department=None, office=None):
 
-        def a(obj, attr):
-            if type(obj) == int:
-                return obj
-            if type(getattr(obj, attr)) == int:
-                return getattr(obj, attr)
-            if hasattr(getattr(obj, attr), 'id'):
-                return getattr(obj, attr).id
-            return None
-
-        self._manager = self._build_expanded(manager, lambda obj: a(obj, 'manager'))
-        self._department = self._build_expanded(department, lambda obj: a(obj, 'department'))
-        self._office = self._build_expanded(office, lambda obj: a(obj, 'office'))
+        self._manager = self._build_expanded(manager, lambda obj: obj.manager.id if obj.manager else None)
+        self._department = self._build_expanded(department, lambda obj: obj.department.id if obj.department else None)
+        self._office = self._build_expanded(office, lambda obj: obj.office.id if obj.office else None)
 
     def _schema_fields(self):
         return {
@@ -93,7 +84,7 @@ class Visitor:
         for e in expand:
             first = e.split('.')[0]
             last = '.'.join(e.split('.')[1:])
-            if first and first in self._allowed_expands():
+            if first in self._allowed_expands():
                 schema_builder = self._get_builder(first)
                 schema_builder.build_schema([last], self)
 

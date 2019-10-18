@@ -1,5 +1,6 @@
 import itertools
 import json
+import logging
 from recordtype import recordtype
 import requests
 
@@ -20,7 +21,7 @@ class Collection:
         self._data.update([(e.id, e) for e in elems])
 
     def get(self, limit=100, offset=1):
-        max = len(self._data) if limit + offset - 1 > len(self._data) else limit + offset
+        max = len(self._data) + 1 if limit + offset > len(self._data) + 1 else limit + offset
         return [self._data.get(k) for k in range(offset, max)]
 
     def get_by_id(self, id):
@@ -49,7 +50,7 @@ class EmployeesCollection(Collection):
         return requests.get(self._URL, params).json()
 
     def _get_by_id(self, params):
-        print('Retrieving: {}'.format(str(['id={}'.format(p) for i, p in params])))
+        logging.info('Retrieving: {}'.format(str(['id={}'.format(p) for i, p in params])))
         return self._get(params)
 
     def _process_employees(self, employees):
@@ -58,7 +59,7 @@ class EmployeesCollection(Collection):
             department = Departments.get_by_id(e['department'])
             manager = super().get_by_id(e['manager'])
             if e['manager'] and not manager:
-                print('Manager {} not found in collection'.format(e['manager']))
+                logging.info('Manager {} not found in collection'.format(e['manager']))
                 self._pending_managers.add(e['manager'])
                 new_employee = Employee(e['id'], e['first'], e['last'], e['manager'], department, office)
             else:
@@ -96,7 +97,7 @@ class EmployeesCollection(Collection):
     def _retrieve_pending(self, levels=0):
         if levels:
             pending_managers = list(self._pending_managers)
-            print('Pending managers to retrieve: {} - level {}'.format(len(pending_managers), levels))
+            logging.info('Pending managers to retrieve: {} - level {}'.format(len(pending_managers), levels))
             self._pending_managers = set([])
             for chunks in self._chunked_iterable(pending_managers, self._IDS_PER_REQUEST):
                 params = [('id', manager) for manager in chunks]
@@ -126,7 +127,3 @@ def load_data_from_files():
 
 Departments, Offices = load_data_from_files()
 Employees = EmployeesCollection()
-#Employees.get_by_id(10000, ['manager.manager.manager.manager.manager'])
-#Employees.get(100,100000, ['manager.manager.manager.manager.manager.manager'])
-#from pprint import pprint
-#pprint(Employees._data.keys())

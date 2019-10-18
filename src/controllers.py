@@ -22,13 +22,15 @@ args = {
 class BaseResource(Resource):
 
     def _return_detail(self, id):
-        schema = self._get_expanded_schema(request.values.getlist('expand'))
-        obj = self._get_collection().get_by_id(id)
+        expand = request.values.getlist('expand')
+        schema = self._get_expanded_schema(expand)
+        obj = self._get_collection().get_by_id(id, expand)
         return schema().dump(obj)
 
     def _return_list(self, limit, offset):
-        schema = self._get_expanded_schema(request.values.getlist('expand'))
-        objs = self._get_collection().get(limit, offset)
+        expand = request.values.getlist('expand')
+        schema = self._get_expanded_schema(expand)
+        objs = self._get_collection().get(limit, offset, expand)
         return schema(many=True).dump(objs)
 
 

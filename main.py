@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-
+import logging
 import os
 import unittest
 from src.controllers import blueprint
 from src import create_app
 
+logging.basicConfig(format='%(asctime)s[%(levelname)s] %(message)s', level=logging.INFO)
 app, manager = create_app(os.getenv('APP_ENV') or 'dev')
 
 @manager.command
