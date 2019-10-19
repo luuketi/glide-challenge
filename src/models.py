@@ -20,9 +20,9 @@ class Collection:
     def adds(self, elems):
         self._data.update([(e.id, e) for e in elems])
 
-    def get(self, limit=100, offset=1, expand=None):
-        max = len(self._data) + 1 if limit + offset > len(self._data) + 1 else limit + offset
-        return [self._data.get(k) for k in range(offset, max)]
+    def get(self, limit=100, offset=0, expand=None):
+        max = len(self._data) + 1 if limit + offset > len(self._data) + 1 else limit + offset + 1
+        return [self._data.get(k) for k in range(offset + 1, max)]
 
     def get_by_id(self, id, expand=None):
         return self._data.get(id)
@@ -76,8 +76,8 @@ class EmployeesCollection(Collection):
         manager_count = max([sum(1 for m in e.split('.') if m == 'manager') for e in expand], default=0)
         self._retrieve_pending(manager_count+1)
 
-    def get(self, limit=100, offset=1, expand=[]):
-        if offset < 1:
+    def get(self, limit=100, offset=0, expand=[]):
+        if offset < 0:
             raise RuntimeError('Offset must be higher than 0')
         if limit < 1 or limit > 1000:
             raise RuntimeError('Limit must be higher than 0 and less than 1000')

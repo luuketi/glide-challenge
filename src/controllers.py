@@ -14,8 +14,8 @@ api = Api(blueprint,
           )
 
 args = {
-    'limit': fields.Int(missing=100, validate=[validate.Range(min=1, max=10000)]),
-    'offset': fields.Int(missing=1, validate=[validate.Range(min=1)]),
+    'limit': fields.Int(missing=100, validate=[validate.Range(min=1, max=1000)]),
+    'offset': fields.Int(missing=0, validate=[validate.Range(min=0)]),
 }
 
 
