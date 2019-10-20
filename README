@@ -1,0 +1,8 @@
+Setup:
+    pip install -r requirements.txt
+
+To run the server:
+    ./main.py run
+
+To run the tests:
+    ./main.py test
