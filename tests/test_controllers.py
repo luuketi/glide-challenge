@@ -29,7 +29,7 @@ class ListControllerTest(BaseTestCase):
 
         def get(params):
             return [{"first": "Patricia", "last": "Diaz", "id": x, "manager": None, "department": 5, "office": 2}
-                    for x in range(1, params['limit'] + 1)]
+                    for x in range(1, params['limit'] + params['offset'] + 1)]
 
         _get.side_effect = get
 
@@ -42,7 +42,7 @@ class ListControllerTest(BaseTestCase):
         self.assertEqual(len(response.json), 6)
 
         response = self._get(self._employee_url, params)
-        self.assertEqual(len(response.json), 96)
+        self.assertEqual(len(response.json), 100)
 
     def test_limits(self):
         for url in [self._office_url, self._department_url, self._employee_url]:
@@ -114,5 +114,3 @@ class EmployeeControllerTest(BaseTestCase):
         self.assertEqual(response.json['manager']['manager']['manager']['id'], 85)
         self.assertEqual(response.json['office']['id'], 2)
         self.assertEqual(response.json['department']['superdepartment']['superdepartment'], 1)
-
-
