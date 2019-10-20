@@ -71,10 +71,13 @@ class EmployeesCollection(Collection):
                 employee.manager = manager
             super().add(employee)
 
-    def _process_response(self, data, expand):
-        """Store the employees from json dict and retrieve pending managers"""
+    def _clear_collection(self):
         self._data = {}
         self._pending_managers = set([])
+
+    def _process_response(self, data, expand):
+        """Store the employees from json dict and retrieve pending managers"""
+        self._clear_collection()
         self._process_employees(data)
         manager_count = max([sum(1 for m in e.split('.') if m == 'manager') for e in expand], default=0)
         self._retrieve_pending(manager_count+1)
