@@ -21,8 +21,8 @@ class Collection:
         self._data.update([(e.id, e) for e in elems])
 
     def get(self, limit, offset, expand=None):
-        max = len(self._data) + 1 if limit + offset > len(self._data) + 1 else limit + offset + 1
-        return [self._data.get(k) for k in range(offset + 1, max)]
+        max = len(self._data) if limit > len(self._data) else limit
+        return [self._data.get(k) for k in range(offset + 1, max + 1)]
 
     def get_by_id(self, id, expand=None):
         return self._data.get(id)
@@ -86,7 +86,8 @@ class EmployeesCollection(Collection):
             raise RuntimeError('Limit must be higher than 0 and less than 1000')
         data = self._get({'limit': limit, 'offset': offset})
         self._process_response(data, expand)
-        return super().get(limit, offset)
+        max = len(self._data) if limit > len(self._data) else limit + offset
+        return [self._data.get(k) for k in range(offset + 1, max + 1)]
 
     def get_by_id(self, id, expand=[]):
         data = self._get_by_id([('id', id)])
