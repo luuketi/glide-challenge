@@ -21,11 +21,18 @@ class Collection:
         self._data.update([(e.id, e) for e in elems])
 
     def get(self, limit, offset, expand=None):
+        self._validate_params(limit, offset)
         max = len(self._data) if limit > len(self._data) else limit
         return [self._data.get(k) for k in range(offset + 1, max + 1)]
 
     def get_by_id(self, id, expand=None):
         return self._data.get(id)
+
+    def _validate_params(self, limit, offset):
+        if offset < 0:
+            raise RuntimeError('Offset must be a positive number')
+        if limit < 1 or limit > 1000:
+            raise RuntimeError('Limit must be higher than 0 and less than 1000')
 
 
 class EmployeesCollection(Collection):
@@ -83,10 +90,7 @@ class EmployeesCollection(Collection):
         self._retrieve_pending(manager_count+1)
 
     def get(self, limit, offset, expand=[]):
-        if offset < 0:
-            raise RuntimeError('Offset must be a positive number')
-        if limit < 1 or limit > 1000:
-            raise RuntimeError('Limit must be higher than 0 and less than 1000')
+        self._validate_params(limit, offset)
         data = self._get({'limit': limit, 'offset': offset})
         self._process_response(data, expand)
         max = len(self._data) if limit > len(self._data) else limit + offset
