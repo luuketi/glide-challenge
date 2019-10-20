@@ -22,12 +22,14 @@ args = {
 class BaseResource(Resource):
 
     def _return_detail(self, id):
+        """Common detail endpoint"""
         expand = request.values.getlist('expand')
         schema = self._get_expanded_schema(expand)
         obj = self._get_collection().get_by_id(id, expand)
         return schema().dump(obj)
 
     def _return_list(self, limit, offset):
+        """Common list endpoint"""
         expand = request.values.getlist('expand')
         schema = self._get_expanded_schema(expand)
         objs = self._get_collection().get(limit, offset, expand)

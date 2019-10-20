@@ -3,7 +3,7 @@ from flask_script import Manager
 
 from src.config import config_by_name
 
-blueprint = Blueprint('api', __name__)
+blueprint = Blueprint('api', __name__, url_prefix='/bigcorp')
 
 
 def create_app(config_name):

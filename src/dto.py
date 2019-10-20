@@ -3,19 +3,24 @@ from abc import ABC
 from marshmallow import Schema, fields
 
 
-class BaseSchema:
+class BaseSchema(ABC):
 
     def _build_expanded(self, field, function):
-        return fields.Nested(field) if field and type(field) != int else fields.Function(function)
+        """Create nested field based on the inner expanded"""
+        return fields.Nested(field) if field else fields.Function(function)
+
+    def _schema_fields(self):
+        """Return dict with marshmallow schema"""
+        raise NotImplementedError
 
     def build(self):
+        """Create the schema class dinamically"""
         return type(self.__class__.__name__, (Schema,), self._schema_fields())
 
 
 class EmployeeSchema(BaseSchema):
 
     def __init__(self, manager=None, department=None, office=None):
-
         self._manager = self._build_expanded(manager, lambda obj: obj.manager.id if obj.manager else None)
         self._department = self._build_expanded(department, lambda obj: obj.department.id if obj.department else None)
         self._office = self._build_expanded(office, lambda obj: obj.office.id if obj.office else None)
@@ -67,19 +72,17 @@ class Visitor(ABC):
     def accept_expanded_manager(self, expanded):
         pass
 
-    def build_schema(self, expand=[], visit=None):
-        raise NotImplementedError
+
+class BaseSchemaBuilder(ABC):
 
     @staticmethod
     def _get_builder(name):
-
         expandables = {
             'manager': EmployeeSchemaBuilder(),
             'office': OfficeSchemaBuilder(),
             'department': DepartmentSchemaBuilder(),
             'superdepartment': DepartmentSchemaBuilder(),
         }
-
         return expandables[name]
 
     def _expand(self, expand):
@@ -91,8 +94,18 @@ class Visitor(ABC):
                 schema_builder = self._get_builder(first)
                 schema_builder.build_schema([last], self)
 
+    def get_expanded(self):
+        """Return final expanded schema"""
+        raise NotImplementedError
 
-class DepartmentSchemaBuilder(Visitor):
+    def build_schema(self, expand=[], visit=None):
+        raise NotImplementedError
+
+    def _allowed_expands(self):
+        raise NotImplementedError
+
+
+class DepartmentSchemaBuilder(BaseSchemaBuilder, Visitor):
 
     def __init__(self):
         self._department_expanded = None
@@ -112,7 +125,7 @@ class DepartmentSchemaBuilder(Visitor):
         visit.accept_expanded_department(schema)
 
 
-class OfficeSchemaBuilder(Visitor):
+class OfficeSchemaBuilder(BaseSchemaBuilder, Visitor):
 
     def __init__(self):
         self._office_expanded = None
@@ -128,7 +141,7 @@ class OfficeSchemaBuilder(Visitor):
         visit.accept_expanded_office(schema)
 
 
-class EmployeeSchemaBuilder(Visitor):
+class EmployeeSchemaBuilder(BaseSchemaBuilder, Visitor):
 
     def __init__(self):
         self._department_expanded = None

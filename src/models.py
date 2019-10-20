@@ -20,7 +20,7 @@ class Collection:
     def adds(self, elems):
         self._data.update([(e.id, e) for e in elems])
 
-    def get(self, limit=100, offset=0, expand=None):
+    def get(self, limit, offset, expand=None):
         max = len(self._data) + 1 if limit + offset > len(self._data) + 1 else limit + offset + 1
         return [self._data.get(k) for k in range(offset + 1, max)]
 
@@ -54,19 +54,22 @@ class EmployeesCollection(Collection):
         logging.info('Retrieving: {}'.format(str(['id={}'.format(p) for i, p in params])))
         return self._get(params)
 
+    def _build_employee(self, json):
+        office = Offices.get_by_id(json['office'])
+        department = Departments.get_by_id(json['department'])
+        return Employee(json['id'], json['first'], json['last'], json['manager'], department, office)
+
     def _process_employees(self, employees):
         """Build employees objects from json dict and store them"""
         for e in employees:
-            office = Offices.get_by_id(e['office'])
-            department = Departments.get_by_id(e['department'])
+            employee = self._build_employee(e)
             manager = super().get_by_id(e['manager'])
             if e['manager'] and not manager:
                 logging.info('Manager {} not found in collection'.format(e['manager']))
                 self._pending_managers.add(e['manager'])
-                new_employee = Employee(e['id'], e['first'], e['last'], e['manager'], department, office)
             else:
-                new_employee = Employee(e['id'], e['first'], e['last'], manager, department, office)
-            super().add(new_employee)
+                employee.manager = manager
+            super().add(employee)
 
     def _process_response(self, data, expand):
         """Store the employees from json dict and retrieve pending managers"""
@@ -76,9 +79,9 @@ class EmployeesCollection(Collection):
         manager_count = max([sum(1 for m in e.split('.') if m == 'manager') for e in expand], default=0)
         self._retrieve_pending(manager_count+1)
 
-    def get(self, limit=100, offset=0, expand=[]):
+    def get(self, limit, offset, expand=[]):
         if offset < 0:
-            raise RuntimeError('Offset must be higher than 0')
+            raise RuntimeError('Offset must be a positive number')
         if limit < 1 or limit > 1000:
             raise RuntimeError('Limit must be higher than 0 and less than 1000')
         data = self._get({'limit': limit, 'offset': offset})
@@ -114,7 +117,7 @@ class EmployeesCollection(Collection):
                 self._retrieve_pending(levels-1)
 
 
-def load_data_from_files():
+def _load_data_from_files():
     departments = Collection()
     offices = Collection()
 
@@ -130,5 +133,5 @@ def load_data_from_files():
     return departments, offices
 
 
-Departments, Offices = load_data_from_files()
+Departments, Offices = _load_data_from_files()
 Employees = EmployeesCollection()

@@ -5,7 +5,6 @@ from main import app
 
 
 class BaseTestCase(TestCase):
-    """ Base Tests """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
