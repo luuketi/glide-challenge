@@ -1,8 +1,8 @@
 Setup:
     pip install -r requirements.txt
 
-To run the server:
+To run the server (it will run at http://127.0.0.1:8080/bigcorp/):
     ./main.py run
-
+    
 To run the tests:
     ./main.py test
